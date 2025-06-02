@@ -1,0 +1,2 @@
+# ai2docx
+前处理并调用pandoc将大语言模型生成的内容转为word
