@@ -47,7 +47,7 @@ def convert_to_word():
     #md=re.sub(r'\\\[\s*','$$',md)
     #md=re.sub(r'\s*\\\]','$$',md)
 
-    filename = re.sub(r'[<>:"/\\|?*\x00-\x1F]+', '_', re.sub(r'\s+', ' ', md[0:11]))
+    filename = re.sub(r'[<>:"/\\|?*\x00-\x1F]+', '_', re.sub(r'\s+', ' ', md[0:11].rstrip()))
     
     try:
         with open(f'{filename}.md', 'w', encoding='utf-8') as f:
@@ -57,7 +57,8 @@ def convert_to_word():
         return 
     
     try:
-        pcp=subprocess.run(f'pandoc -f commonmark_x -t docx "{filename}.md" -o "{filename}.docx"',bufsize=0,stderr=subprocess.STDOUT)
+        pcp=subprocess.run(f'pandoc -f commonmark_x -t docx "{filename}.md" -o "{filename}.docx"'\
+                           ,bufsize=0,stderr=subprocess.STDOUT,creationflags=subprocess.CREATE_NO_WINDOW)
     except Exception as e:
         print_log(f'调用pandoc失败-{e}')
         return
@@ -81,7 +82,7 @@ ctypes.windll.shcore.SetProcessDpiAwareness(1)
 
 #获取屏幕的缩放因子
 scale_factor=ctypes.windll.shcore.GetScaleFactorForDevice(0)
-scale_factor/=50
+scale_factor*=0.02  
 pad0=int(3*scale_factor)
 pad1=int(5*scale_factor)
 
