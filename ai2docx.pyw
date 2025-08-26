@@ -1,11 +1,12 @@
 import tkinter as tk
 from tkinter import font
 import os
-import re
-import ctypes
+import platform
+import subprocess
 import datetime
 import atexit
-import subprocess
+import re
+
 
 temp_files = []
 
@@ -75,52 +76,80 @@ def convert_to_word():
         print_log(f'文件打开失败-{e}')
         return
 
-# 创建主窗口
 
-#告诉操作系统使用程序自身的dpi适配
-ctypes.windll.shcore.SetProcessDpiAwareness(1)
+#DPI适配
+os_name = platform.system()
+scale_factor = 1.0
+if os_name == "Windows":
+    try:
+        import ctypes
+        ctypes.windll.shcore.SetProcessDpiAwareness(1)
+        scale_factor=ctypes.windll.shcore.GetScaleFactorForDevice(0)
+        scale_factor*=0.02
+    except Exception as e:
+        print(f"适配DPI失败-{e}")
+        scale_factor=1.0
 
-#获取屏幕的缩放因子
-scale_factor=ctypes.windll.shcore.GetScaleFactorForDevice(0)
-scale_factor*=0.02  
 pad0=int(3*scale_factor)
 pad1=int(5*scale_factor)
 
+# 创建主窗口
 root = tk.Tk()
 root.tk.call('tk', 'scaling', scale_factor)
 root.title("语言模型输出转为 Word")
-root.geometry(f"{int(320*scale_factor)}x{int(240*scale_factor)}")
+root.geometry(f"{int(320*scale_factor)}x{int(256*scale_factor)}")
+
+
+# 创建一个较小的等宽字体
+SmallFixed = font.nametofont('TkFixedFont').copy()
+SmallFixed['size'] = int(font.nametofont('TkFixedFont').cget('size') * 0.8)
+
+SmallFont = font.nametofont('TkDefaultFont').copy()
+SmallFont['size'] = int(font.nametofont('TkDefaultFont').cget('size') * 0.7)
+
+
+# 使用 grid 布局
+root.grid_columnconfigure(0, weight=1)
+root.grid_rowconfigure(2, weight=1)
 
 # 标题
-# 创建一个框架来容纳标题
-title_frame = tk.Frame(root)
-title_frame.pack(fill=tk.X)
-# 添加标题
-instruction_label = tk.Label(title_frame, text="请粘贴复制按钮复制的文字：")
-instruction_label.pack(side=tk.LEFT,padx=pad1,pady=pad1)
+instruction_label = tk.Label(root, text="请粘贴复制按钮复制的文字：")
+instruction_label.grid(row=0, column=0, sticky='w', padx=pad1, pady=pad1)
 
-# 输入
+# 提示
+hint_label = tk.Label(root, text="注：转换按钮无条件清空输入框，退出程序无条件删除所有输出文件。修改输出文件后请备份！",
+                      font=SmallFont, wraplength=int(320*scale_factor) - 2 * pad1, justify="left")
+hint_label.grid(row=1, column=0, sticky='w', padx=pad1)
+
+def update_warplength(event):
+    instruction_label.config(wraplength=root.winfo_width() - 2 * pad1)
+    hint_label.config(wraplength=root.winfo_width() - 2 * pad1)
+root.bind("<Configure>", update_warplength)
+
+# 输入框和滚动条
 # 创建一个框架来容纳多行输入框和滚动条
 input_frame = tk.Frame(root)
-input_frame.pack(fill=tk.BOTH,expand=True)
+input_frame.grid(row=2, column=0, sticky='nsew')
+input_frame.grid_columnconfigure(0, weight=1)
+input_frame.grid_rowconfigure(0, weight=1)
+
 # 添加一个多行输入框
 text_area = tk.Text(input_frame, height=0, width=0, borderwidth=0, font='TkFixedFont')
-text_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+text_area.grid(row=0, column=0, sticky='nsew')
+
 # 添加一个垂直滚动条
 scrollbar = tk.Scrollbar(input_frame, command=text_area.yview)
-scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-text_area['yscrollcommand']=scrollbar.set
+scrollbar.grid(row=0, column=1, sticky='ns')
+text_area['yscrollcommand'] = scrollbar.set
 
 # 日志
-# 添加一个只读的单行输入框来显示日志
-SmallFixed=font.nametofont('TkFixedFont').copy()
-SmallFixed['size'] = int(font.nametofont('TkFixedFont').cget('size')*0.8)
-log_entry =tk.Entry(root,font=SmallFixed,state='readonly')
-log_entry.pack(fill=tk.X)
+log_entry = tk.Entry(root, font=SmallFixed, state='readonly')
+log_entry.grid(row=3, column=0, sticky='ew')
 
-# 添加一个按钮
+# 按钮
 read_button = tk.Button(root, text="转换", command=convert_to_word)
-read_button.pack(pady=pad0)
+read_button.grid(row=4, column=0, pady=pad0)
+
 
 # 运行主循环，显示窗口
 root.mainloop()
